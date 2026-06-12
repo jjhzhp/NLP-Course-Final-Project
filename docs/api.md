@@ -111,3 +111,5 @@ Content-Type: application/json
 - `summary`
 - `quiz`
 - `grade`
+
+当 `task_type="auto"` 时，后端会先调用 LLM Router Agent 判断任务类型、检索策略和改写后的检索 query。显式传入其他任务类型时，用户选择优先。LLM Router 失败时会回退到规则路由。
