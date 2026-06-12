@@ -1,3 +1,5 @@
+from typing import Any, AsyncIterator
+
 import httpx
 from sqlalchemy.orm import Session
 
@@ -60,3 +62,64 @@ class QATool:
             )
 
         return ChatResponse(task_type="qa", answer=answer, sources=chunks, confidence=confidence)
+
+    async def run_stream(
+        self,
+        db: Session,
+        query: str,
+        use_pro_model: bool = False,
+        top_k: int | None = None,
+        retrieval_query: str | None = None,
+        retrieval_profile: str = "qa",
+    ) -> AsyncIterator[dict[str, Any]]:
+        chunks = self.retriever.retrieve(
+            db,
+            retrieval_query or query,
+            top_k or self.settings.final_top_k,
+            profile=retrieval_profile,
+        )
+        confidence = estimate_confidence(chunks)
+        sources_payload = [c.model_dump() for c in chunks]
+
+        if confidence == "low":
+            yield {
+                "type": "meta",
+                "task_type": "qa",
+                "confidence": "low",
+                "sources": sources_payload,
+                "message": "low_retrieval_confidence",
+            }
+            yield {
+                "type": "delta",
+                "text": "课程资料中未找到与该问题充分相关的内容。建议补充资料，或换一种更具体的问法。",
+            }
+            yield {"type": "done"}
+            return
+
+        yield {
+            "type": "meta",
+            "task_type": "qa",
+            "confidence": confidence,
+            "sources": sources_payload,
+        }
+
+        prompt = build_qa_prompt(query, chunks)
+        model = self.settings.deepseek_pro_model if use_pro_model else self.settings.deepseek_model
+        try:
+            async for token in self.llm.chat_stream(
+                messages=[
+                    {"role": "system", "content": QA_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                model=model,
+                temperature=0.2,
+            ):
+                yield {"type": "delta", "text": token}
+        except (RuntimeError, httpx.HTTPError) as exc:
+            yield {
+                "type": "error",
+                "message": f"调用 DeepSeek API 失败：{exc}",
+            }
+            return
+
+        yield {"type": "done"}

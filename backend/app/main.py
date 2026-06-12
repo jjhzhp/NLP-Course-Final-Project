@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
 
 from app.api import chat, documents, health, search
 from app.config import get_settings
@@ -22,6 +25,11 @@ app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(search.router)
 app.include_router(chat.router)
+
+
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 
 def custom_openapi() -> dict:

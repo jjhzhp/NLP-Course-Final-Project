@@ -33,6 +33,16 @@ DEEPSEEK_API_KEY=your_api_key_here
 GET http://localhost:8000/api/health
 ```
 
+前端页面挂在根路径，启动后端后直接打开：
+
+```text
+http://localhost:8000/
+```
+
+页面包含三栏布局：左侧资料库（上传 / 列表 / 删除），中间对话（流式输出，Enter 发送、Shift+Enter 换行），右侧设置（任务类型 / top_k / Pro 模型）。右上角圆形按钮可在深色 / 浅色主题之间切换。
+
+支持上传 PDF / Markdown (`.md`/`.markdown`) / TXT，单个文件默认上限 100 MB，可在 `.env` 配置 `MAX_UPLOAD_SIZE_MB` 调整。
+
 ## 当前阶段
 
 已覆盖阶段 0-4 后端部分：
@@ -51,6 +61,8 @@ GET http://localhost:8000/api/health
 - `QATool`、`SummaryTool`、`QuizTool`、`GradingTool`
 - 统一 `AgentService` 调度入口
 - `task_type=auto` 时使用 LLM Router Agent 决策任务类型和检索 query
+- `/api/chat/stream` SSE 流式输出，前端逐字渲染
+- 单页前端（HTML + 原生 JS），由 FastAPI 静态托管
 
 ## 检索配置
 
@@ -168,7 +180,6 @@ http://localhost:8000/docs
 
 后续可继续补充：
 
-- 前端界面
 - Quiz / Grade 专用检索 profile
 - RAG 评测集和检索指标
 - OCR 文档支持

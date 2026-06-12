@@ -19,6 +19,10 @@ Field:
 files: UploadFile[]
 ```
 
+支持格式：`pdf` / `md` / `markdown` / `txt`，单个文件默认上限 100 MB（可通过 `MAX_UPLOAD_SIZE_MB` 调整）。
+- 不支持的扩展名返回 `400`。
+- 单个文件超过上限返回 `413`。
+
 ## List Documents
 
 ```http
@@ -113,3 +117,24 @@ Content-Type: application/json
 - `grade`
 
 当 `task_type="auto"` 时，后端会先调用 LLM Router Agent 判断任务类型、检索策略和改写后的检索 query。显式传入其他任务类型时，用户选择优先。LLM Router 失败时会回退到规则路由。
+
+## Chat Stream (SSE)
+
+```http
+POST /api/chat/stream
+Content-Type: application/json
+
+{
+  "query": "什么是条件随机场？",
+  "task_type": "qa"
+}
+```
+
+返回 `text/event-stream`，每条 `data:` 行是一个 JSON：
+
+- `{"type":"meta","task_type":"qa","confidence":"high","sources":[...],"message":null}` 首先到达。
+- `{"type":"delta","text":"..."}` 多次，逐 token 拼接成最终回答。
+- `{"type":"done"}` 表示正常结束。
+- `{"type":"error","message":"..."}` 表示中途失败。
+
+请求体与 `/api/chat` 完全一致。
