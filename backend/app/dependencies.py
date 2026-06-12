@@ -9,6 +9,7 @@ from app.retrieval.reranker import Reranker
 from app.retrieval.retriever import HybridRetriever
 from app.retrieval.vector_store import FaissVectorStore
 from app.tools.qa_tool import QATool
+from app.tools.summary_tool import SummaryTool
 
 
 @lru_cache
@@ -67,3 +68,7 @@ def get_ingestion_service() -> IngestionService:
 
 def get_qa_tool() -> QATool:
     return QATool(get_vector_retriever(), get_llm_client(), get_settings())
+
+
+def get_summary_tool() -> SummaryTool:
+    return SummaryTool(get_vector_retriever(), get_llm_client(), get_settings())

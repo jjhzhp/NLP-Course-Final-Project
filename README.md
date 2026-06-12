@@ -58,11 +58,20 @@ RERANKER_MODEL=BAAI/bge-reranker-base
 VECTOR_TOP_K=10
 BM25_TOP_K=10
 FINAL_TOP_K=5
+SUMMARY_FINAL_TOP_K=10
 VECTOR_WEIGHT=0.6
 BM25_WEIGHT=0.4
 ```
 
 第一次检索会下载 embedding / reranker 模型，耗时会明显更长。
+
+## QA 与 Summary 检索策略
+
+系统现在会在检索阶段区分问答和总结：
+
+- `qa`：精确检索，候选较少，适合回答具体问题。
+- `summary`：扩展多个主题 query，召回更多片段，并做来源多样性筛选，适合知识点梳理。
+- `default`：用于普通检索调试，行为接近基础混合检索。
 
 ## 接口测试
 
@@ -81,7 +90,14 @@ curl.exe -F "files=@D:\NLP-CourseWork\test.md" http://localhost:8000/api/documen
 检索测试：
 
 ```powershell
-$body = @{ query = "什么是条件随机场？"; top_k = 5 } | ConvertTo-Json
+$body = @{ query = "什么是条件随机场？"; top_k = 5; profile = "qa" } | ConvertTo-Json
+Invoke-RestMethod -Uri http://localhost:8000/api/search -Method Post -ContentType "application/json" -Body $body
+```
+
+总结检索测试：
+
+```powershell
+$body = @{ query = "总结一下中文分词的主要方法"; top_k = 10; profile = "summary" } | ConvertTo-Json
 Invoke-RestMethod -Uri http://localhost:8000/api/search -Method Post -ContentType "application/json" -Body $body
 ```
 
@@ -93,6 +109,17 @@ $body = @{
   task_type = "qa"
   use_pro_model = $false
   top_k = 5
+} | ConvertTo-Json
+Invoke-RestMethod -Uri http://localhost:8000/api/chat -Method Post -ContentType "application/json" -Body $body
+```
+
+RAG 总结：
+
+```powershell
+$body = @{
+  query = "总结一下中文分词的主要方法"
+  task_type = "summary"
+  use_pro_model = $false
 } | ConvertTo-Json
 Invoke-RestMethod -Uri http://localhost:8000/api/chat -Method Post -ContentType "application/json" -Body $body
 ```

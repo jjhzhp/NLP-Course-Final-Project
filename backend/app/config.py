@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     vector_top_k: int = 10
     bm25_top_k: int = 10
     final_top_k: int = 5
+    summary_final_top_k: int = 10
     vector_weight: float = 0.6
     bm25_weight: float = 0.4
     enable_reranker: bool = True

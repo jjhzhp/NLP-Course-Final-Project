@@ -56,6 +56,7 @@ class RetrievedChunk(BaseModel):
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
+    profile: str = "default"
 
 
 class SearchResponse(BaseModel):
@@ -66,7 +67,7 @@ class ChatRequest(BaseModel):
     query: str
     task_type: TaskTypeValue | None = "qa"
     use_pro_model: bool = False
-    top_k: int = 5
+    top_k: int | None = None
     extra_context: dict[str, Any] | None = None
 
 
@@ -76,4 +77,3 @@ class ChatResponse(BaseModel):
     sources: list[RetrievedChunk]
     confidence: ConfidenceValue
     message: str | None = None
-

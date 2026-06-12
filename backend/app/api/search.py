@@ -11,6 +11,10 @@ router = APIRouter(prefix="/api", tags=["search"])
 
 @router.post("/search", response_model=SearchResponse)
 def search(request: SearchRequest, db: Session = Depends(get_db)) -> SearchResponse:
-    results = get_vector_retriever().retrieve(db, request.query, request.top_k)
+    results = get_vector_retriever().retrieve(
+        db,
+        request.query,
+        request.top_k,
+        profile=request.profile,
+    )
     return SearchResponse(results=results)
-
