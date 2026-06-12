@@ -1,3 +1,5 @@
+from typing import Any, AsyncIterator
+
 import httpx
 from sqlalchemy.orm import Session
 
@@ -54,3 +56,47 @@ class QuizTool:
 
         message = "low_retrieval_confidence" if confidence == "low" else None
         return ChatResponse(task_type="quiz", answer=answer, sources=chunks, confidence=confidence, message=message)
+
+    async def run_stream(
+        self,
+        db: Session,
+        query: str,
+        use_pro_model: bool = False,
+        top_k: int | None = None,
+        retrieval_query: str | None = None,
+        retrieval_profile: str = "summary",
+    ) -> AsyncIterator[dict[str, Any]]:
+        chunks = self.retriever.retrieve(
+            db,
+            retrieval_query or query,
+            top_k or self.settings.summary_final_top_k,
+            profile=retrieval_profile,
+        )
+        confidence = estimate_confidence(chunks)
+        message = "low_retrieval_confidence" if confidence == "low" else None
+        yield {
+            "type": "meta",
+            "task_type": "quiz",
+            "confidence": confidence,
+            "sources": [c.model_dump() for c in chunks],
+            "message": message,
+        }
+
+        prompt = build_quiz_prompt(query, chunks)
+        model = self.settings.deepseek_pro_model if use_pro_model else self.settings.deepseek_model
+        try:
+            async for token in self.llm.chat_stream(
+                messages=[
+                    {"role": "system", "content": QUIZ_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                model=model,
+                temperature=0.3,
+                max_tokens=1600,
+            ):
+                yield {"type": "delta", "text": token}
+        except (RuntimeError, httpx.HTTPError) as exc:
+            yield {"type": "error", "message": f"调用 DeepSeek API 失败：{exc}"}
+            return
+
+        yield {"type": "done"}

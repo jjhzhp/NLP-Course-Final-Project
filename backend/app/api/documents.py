@@ -22,11 +22,21 @@ async def upload_documents(
     ingestion: IngestionService = Depends(get_ingestion_service),
 ) -> UploadResponse:
     settings = get_settings()
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
     documents = []
     for upload in files:
         filename = upload.filename or ""
         try:
             file_type = get_file_type(filename)
+            if upload.size is not None and upload.size > max_bytes:
+                size_mb = upload.size / 1024 / 1024
+                raise HTTPException(
+                    status_code=413,
+                    detail=(
+                        f"{filename}: {size_mb:.1f} MB exceeds the "
+                        f"{settings.max_upload_size_mb} MB upload limit"
+                    ),
+                )
             document_id = new_document_id()
             file_path = await save_upload_file(upload, settings.upload_dir, document_id)
             document = ingestion.ingest_file(

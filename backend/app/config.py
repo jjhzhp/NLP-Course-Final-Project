@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     enable_reranker: bool = True
 
     request_timeout: float = 60.0
+    max_upload_size_mb: int = 100
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
     model_config = SettingsConfigDict(

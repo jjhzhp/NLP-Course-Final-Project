@@ -25,4 +25,3 @@ async def save_upload_file(upload_file: UploadFile, upload_dir: Path, document_i
     content = await upload_file.read()
     target.write_bytes(content)
     return target
-

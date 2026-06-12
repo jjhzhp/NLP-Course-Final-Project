@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Course RAG Agent</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>Course RAG Agent</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="status">
+        <span id="health-dot" class="health unknown"></span>
+        <span id="health-text">未连接</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" title="切换主题">夜</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左：资料库 -->
+    <aside class="col col-left">
+      <div class="section-title">资料库</div>
+      <label class="upload-btn">
+        <input id="file-input" type="file" multiple accept=".pdf,.md,.markdown,.txt" />
+        + 上传文件
+      </label>
+      <div class="upload-hint">支持 PDF / Markdown / TXT，单文件 ≤ 100 MB</div>
+      <div id="upload-status" class="upload-status"></div>
+      <div class="doc-list-header">
+        <span>已上传 <span id="doc-count">0</span></span>
+        <button id="refresh-docs" type="button" class="ghost">刷新</button>
+      </div>
+      <ul id="doc-list" class="doc-list">
+        <li class="empty-tip">尚未加载文档列表</li>
+      </ul>
+    </aside>
+
+    <div class="resizer" id="resizer-left" data-target="left"></div>
+
+    <!-- 中：对话 -->
+    <section class="col col-chat">
+      <div id="chat-log" class="chat-log">
+        <div class="empty-tip">向 Agent 提问，或让它出题、批改、总结。</div>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <div class="chat-input-row">
+          <textarea id="chat-input" rows="2"
+            placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+          <button type="submit" id="chat-send">发送</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="resizer" id="resizer-right" data-target="right"></div>
+
+    <!-- 右：设置 -->
+    <aside class="col col-right">
+      <div class="section-title">设置</div>
+      <label class="setting">
+        <span>任务类型</span>
+        <select id="task-type">
+          <option value="auto">auto（自动路由）</option>
+          <option value="qa" selected>qa（问答）</option>
+          <option value="summary">summary（总结）</option>
+          <option value="quiz">quiz（出题）</option>
+          <option value="grade">grade（批改）</option>
+        </select>
+      </label>
+      <label class="setting">
+        <span>top_k</span>
+        <input id="chat-topk" type="number" min="1" max="20" value="5" />
+      </label>
+      <label class="setting checkbox">
+        <input id="use-pro" type="checkbox" />
+        <span>使用 Pro 模型</span>
+      </label>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.5/dist/purify.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

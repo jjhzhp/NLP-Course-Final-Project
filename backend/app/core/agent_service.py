@@ -1,3 +1,5 @@
+from typing import Any, AsyncIterator
+
 from sqlalchemy.orm import Session
 
 from app.core.router_agent import RouterAgent, TaskType
@@ -65,3 +67,36 @@ class AgentService:
             retrieval_query=retrieval_query,
             retrieval_profile=retrieval_profile,
         )
+
+    async def handle_stream(
+        self, db: Session, request: ChatRequest
+    ) -> AsyncIterator[dict[str, Any]]:
+        decision = await self.router.decide(request.query, request.task_type)
+        task_type = TaskType(decision.task_type)
+        retrieval_query = decision.rewritten_query or request.query
+        retrieval_profile = decision.retrieval_profile
+        use_pro_model = request.use_pro_model or decision.needs_pro_model
+
+        if task_type == TaskType.SUMMARY:
+            stream = self.summary_tool.run_stream(
+                db, request.query, use_pro_model, request.top_k,
+                retrieval_query=retrieval_query, retrieval_profile=retrieval_profile,
+            )
+        elif task_type == TaskType.QUIZ:
+            stream = self.quiz_tool.run_stream(
+                db, request.query, use_pro_model, request.top_k,
+                retrieval_query=retrieval_query, retrieval_profile=retrieval_profile,
+            )
+        elif task_type == TaskType.GRADE:
+            stream = self.grading_tool.run_stream(
+                db, request.query, True, request.top_k,
+                retrieval_query=retrieval_query, retrieval_profile=retrieval_profile,
+            )
+        else:
+            stream = self.qa_tool.run_stream(
+                db, request.query, use_pro_model, request.top_k,
+                retrieval_query=retrieval_query, retrieval_profile=retrieval_profile,
+            )
+
+        async for event in stream:
+            yield event
