@@ -170,6 +170,8 @@ $body = @{
 Invoke-RestMethod -Uri http://localhost:8000/api/chat -Method Post -ContentType "application/json" -Body $body
 ```
 
+选择题批改会优先判断学生所选选项是否是题干给定选项中的最佳答案；课程资料中的更完整知识列表只作为补充说明，不会直接导致正确选项被判为“部分正确”。
+
 也可以打开 Swagger 页面测试：
 
 ```text
