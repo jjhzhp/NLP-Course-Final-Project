@@ -45,7 +45,7 @@ http://localhost:8000/
 
 ## 当前阶段
 
-已覆盖阶段 0-4 后端部分：
+后端已完成可演示的 RAG + 轻量 Agentic RAG 闭环：
 
 - FastAPI 后端骨架
 - PDF / Markdown / TXT 上传、解析、分块、入库
@@ -57,11 +57,14 @@ http://localhost:8000/
 - 引用来源返回
 - `/api/search` 检索调试接口
 - 低置信度问答拒答
-- 规则型 `RouterAgent`
+- `RouterAgent`：显式任务优先，`task_type=auto` 时使用 LLM 判断任务类型、检索策略和改写 query
+- `AgentPlanner`：自动模式下可将复合请求拆成多个子任务，例如“总结 + 出题”
+- `EvidenceJudge`：检索后判断证据是否充分，不足时触发二次 query 改写与再检索
+- `AgentTrace`：可选返回路由、规划、检索、证据判断、工具调用等决策过程
 - `QATool`、`SummaryTool`、`QuizTool`、`GradingTool`
-- 统一 `AgentService` 调度入口
-- `task_type=auto` 时使用 LLM Router Agent 决策任务类型和检索 query
+- 统一 `AgentService` 调度入口：`route -> plan -> retrieve -> judge -> retry retrieve -> tool generate`
 - `/api/chat/stream` SSE 流式输出，前端逐字渲染
+- DeepSeek 输出被截断时自动续写，降低回答停在半句话的问题
 - 单页前端（HTML + 原生 JS），由 FastAPI 静态托管
 
 ## 检索配置
@@ -89,14 +92,46 @@ BM25_WEIGHT=0.4
 - `summary`：扩展多个主题 query，召回更多片段，并做来源多样性筛选，适合知识点梳理。
 - `default`：用于普通检索调试，行为接近基础混合检索。
 
-## Agent 路由
+## Agentic RAG 流程
 
-`/api/chat` 支持两种路由方式：
+`/api/chat` 和 `/api/chat/stream` 共用同一套 Agent 执行逻辑：
+
+```text
+用户问题
+  ↓
+RouterAgent 判断任务类型、检索 profile、改写 query
+  ↓
+AgentPlanner 判断是否需要拆成多个子任务
+  ↓
+HybridRetriever 初次检索
+  ↓
+EvidenceJudge 判断证据是否充分
+  ↓
+证据不足时进行 query 扩展 / 改写并二次检索
+  ↓
+调用 QA / Summary / Quiz / Grading 工具生成回答
+  ↓
+返回答案、引用来源和可选 AgentTrace
+```
+
+任务路由支持两种方式：
 
 - 显式任务：前端或调用方传 `task_type="qa" / "summary" / "quiz" / "grade"`，系统尊重用户选择。
 - 自动任务：传 `task_type="auto"`，系统调用 DeepSeek Flash 作为 Router Agent，输出任务类型、检索策略和改写后的检索 query。
 
-如果 LLM Router 调用失败或输出无法解析，系统会自动回退到规则路由，保证接口可用。
+如果 LLM Router / Planner / EvidenceJudge 调用失败或输出无法解析，系统会自动回退到规则逻辑，保证接口可用。
+
+如需查看 Agent 决策过程，可在请求中加入：
+
+```json
+{
+  "extra_context": {
+    "debug_agent_trace": true
+  }
+}
+```
+
+返回中的 `agent_trace.steps` 会记录 `route`、`plan`、`retrieve`、`judge_evidence`、`retrieve_retry`、`tool_generate` 等步骤。
 
 ## 接口测试
 
@@ -170,6 +205,29 @@ $body = @{
 Invoke-RestMethod -Uri http://localhost:8000/api/chat -Method Post -ContentType "application/json" -Body $body
 ```
 
+查看 Agent 决策过程：
+
+```powershell
+$body = @{
+  query = "总结 HMM 和 CRF 的区别，并围绕它们出三道题"
+  task_type = "auto"
+  top_k = 8
+  extra_context = @{ debug_agent_trace = $true }
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri http://localhost:8000/api/chat -Method Post -ContentType "application/json" -Body $body
+```
+
+流式输出：
+
+```powershell
+$body = @{
+  query = "总结一下中文分词的主要方法"
+  task_type = "summary"
+  top_k = 8
+} | ConvertTo-Json
+curl.exe -N -H "Content-Type: application/json" -d $body http://localhost:8000/api/chat/stream
+```
+
 选择题批改会优先判断学生所选选项是否是题干给定选项中的最佳答案；课程资料中的更完整知识列表只作为补充说明，不会直接导致正确选项被判为“部分正确”。
 
 也可以打开 Swagger 页面测试：
@@ -186,3 +244,8 @@ http://localhost:8000/docs
 - RAG 评测集和检索指标
 - OCR 文档支持
 - 智能体多轮记忆
+
+前端还需要重点改进：
+
+- 公式显示：当前回答中的 LaTeX / Markdown 公式可能以原始格式展示，后续应接入公式渲染能力，避免用户直接看到 `\( ... \)`、`$$ ... $$` 等源码。
+- Agent 决策过程展示：后端已支持 `agent_trace`，前端可增加可折叠的“Agent 决策过程”面板，展示路由、规划、检索、证据判断和二次检索步骤。

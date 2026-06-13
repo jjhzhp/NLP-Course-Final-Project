@@ -78,6 +78,7 @@ class ChatResponse(BaseModel):
     sources: list[RetrievedChunk]
     confidence: ConfidenceValue
     message: str | None = None
+    agent_trace: "AgentTrace | None" = None
 
 
 class AgentDecision(BaseModel):
@@ -87,3 +88,41 @@ class AgentDecision(BaseModel):
     needs_pro_model: bool = False
     confidence: ConfidenceValue = "medium"
     reason: str | None = None
+
+
+class AgentSubtask(BaseModel):
+    task_type: Literal["qa", "summary", "quiz", "grade"]
+    query: str
+    retrieval_profile: RetrievalProfileValue = "qa"
+    rewritten_query: str | None = None
+    reason: str | None = None
+
+
+class EvidenceDecision(BaseModel):
+    is_sufficient: bool
+    reason: str
+    suggested_queries: list[str] = Field(default_factory=list)
+    suggested_profile: RetrievalProfileValue | None = None
+    should_refuse: bool = False
+
+
+class AgentStep(BaseModel):
+    step_type: str
+    input: dict[str, Any] = Field(default_factory=dict)
+    output: dict[str, Any] = Field(default_factory=dict)
+    status: Literal["ok", "failed"] = "ok"
+    message: str | None = None
+
+
+class AgentTrace(BaseModel):
+    steps: list[AgentStep] = Field(default_factory=list)
+
+
+class AgentState(BaseModel):
+    original_query: str
+    task_type: str
+    retrieval_profile: RetrievalProfileValue
+    use_pro_model: bool
+    subtasks: list[AgentSubtask] = Field(default_factory=list)
+    final_sources: list[RetrievedChunk] = Field(default_factory=list)
+    trace: AgentTrace = Field(default_factory=AgentTrace)
