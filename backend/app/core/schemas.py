@@ -106,6 +106,15 @@ class EvidenceDecision(BaseModel):
     should_refuse: bool = False
 
 
+class SummaryCoverageDecision(BaseModel):
+    is_sufficient: bool
+    reason: str
+    covered_topics: list[str] = Field(default_factory=list)
+    missing_topics: list[str] = Field(default_factory=list)
+    next_queries: list[str] = Field(default_factory=list)
+    should_refuse: bool = False
+
+
 class AgentStep(BaseModel):
     step_type: str
     input: dict[str, Any] = Field(default_factory=dict)

@@ -48,6 +48,7 @@ class HybridRetriever:
         self.enable_reranker = enable_reranker
 
     def rebuild(self, db: Session) -> None:
+        crud.delete_orphan_chunks(db)
         chunks = crud.list_chunks(db)
         if not chunks:
             self.vector_store.build([], None)

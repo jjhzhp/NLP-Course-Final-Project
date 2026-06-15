@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.schemas import ChunkCreate
@@ -46,6 +46,7 @@ def delete_document(db: Session, document_id: str) -> bool:
     document = db.get(Document, document_id)
     if document is None:
         return False
+    db.execute(delete(Chunk).where(Chunk.document_id == document_id))
     db.delete(document)
     db.commit()
     return True
@@ -72,13 +73,31 @@ def create_chunks(db: Session, chunks: list[ChunkCreate]) -> list[Chunk]:
 
 
 def list_chunks(db: Session) -> list[Chunk]:
-    return list(db.scalars(select(Chunk).order_by(Chunk.document_id, Chunk.chunk_index)).all())
+    return list(
+        db.scalars(
+            select(Chunk)
+            .join(Document, Chunk.document_id == Document.id)
+            .order_by(Chunk.document_id, Chunk.chunk_index)
+        ).all()
+    )
 
 
 def get_chunks_by_ids(db: Session, chunk_ids: list[str]) -> list[Chunk]:
     if not chunk_ids:
         return []
-    records = list(db.scalars(select(Chunk).where(Chunk.id.in_(chunk_ids))).all())
+    records = list(
+        db.scalars(
+            select(Chunk)
+            .join(Document, Chunk.document_id == Document.id)
+            .where(Chunk.id.in_(chunk_ids))
+        ).all()
+    )
     by_id = {chunk.id: chunk for chunk in records}
     return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
 
+
+def delete_orphan_chunks(db: Session) -> int:
+    document_ids = select(Document.id)
+    result = db.execute(delete(Chunk).where(Chunk.document_id.not_in(document_ids)))
+    db.commit()
+    return result.rowcount or 0

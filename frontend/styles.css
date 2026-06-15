@@ -34,11 +34,17 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", system-ui, sans-serif;
   font-size: 14px;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 button { font-family: inherit; cursor: pointer; }
@@ -75,14 +81,13 @@ button.ghost {
 button.ghost:hover { color: var(--text); }
 
 .topbar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 20px;
   background: var(--bg-soft);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
   z-index: 10;
 }
 
@@ -139,7 +144,8 @@ button.ghost:hover { color: var(--text); }
     var(--left-fr) 0.4rem var(--chat-fr) 0.4rem var(--right-fr);
   gap: 0;
   padding: 1rem;
-  height: calc(100vh - 53px);
+  flex: 1;
+  min-height: 0;
 }
 .col {
   background: var(--bg-card);
@@ -600,6 +606,15 @@ body.resizing { cursor: col-resize; user-select: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 60rem) {
+  html, body {
+    height: auto;
+    overflow-y: auto;
+  }
+  body { display: block; }
+  .topbar {
+    position: sticky;
+    top: 0;
+  }
   .layout {
     grid-template-columns: 1fr;
     height: auto;
